@@ -12,111 +12,96 @@ import sys
 import requests
 from bs4 import BeautifulSoup
 import urllib.parse
-from datetime import datetime
+import datetime
 
 SEARCH_ENGINES = {
     'Google': 'https://www.google.com/search',
-    'Bing': 'https://www.bing.com/search',
-    'DuckDuckGo': 'https://duckduckgo.com/',
-    'Yandex': 'https://yandex.com/search/'
 }
 
-def fetch_news(location, query):
-    """Fetch recent news articles from Google News."""
-    search_query = f"{location} {query}"
-    url = f"https://www.google.com/search?q={urllib.parse.quote(search_query)}&tbm=nws&tbs=qdr:m"  # Filter results for the past 6 months
-    headers = {
-        'User-Agent': 'Vimes CLI Tool'
-    }
-    
-    try:
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching news: {e}")
-        return []
+SEARCH_TERMS = {
+    '-s': ['stabbing', 'knife attack'],
+    '-r': ['robbery', 'robbers', 'man robbed', 'woman robbed'],
+    '-m': ['murder', 'man murdered', 'woman murdered'],
+    '-g': ['gang attack', 'gang fight', 'gang members']
+}
 
-    soup = BeautifulSoup(response.text, 'html.parser')
+def perform_search(query, search_type):
+    """Perform a search on Google."""
+    search_queries = [f"{query} {term}" for term in SEARCH_TERMS.get(search_type, [])]
+    headlines = []
 
-    articles = []
-    for item in soup.find_all('div', class_='dbsr'):
-        title_tag = item.find('div', class_='JheGif')
-        if not title_tag:
-            continue
-        title = title_tag.get_text()
-        link = item.find('a')['href']
-        date_tag = item.find('span', class_='WG9SHc')
-        if date_tag:
-            date_str = date_tag.get_text()
-            date = parse_date(date_str)
-        else:
-            date = datetime.now()  # Use current date if no date is available
+    for search_query in search_queries:
+        headers = {
+            'User-Agent': 'Vimes CLI Tool'
+        }
+        params = {'q': urllib.parse.quote(search_query)}
 
-        articles.append({'title': title, 'url': link, 'date': date})
+        try:
+            response = requests.get(SEARCH_ENGINES['Google'], headers=headers, params=params)
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.text, 'html.parser')
+            for item in soup.find_all('h3'):
+                title = item.get_text()
+                parent_a = item.find_parent('a')
+                if parent_a and parent_a.has_attr('href'):
+                    url = parent_a['href']
+                else:
+                    url = 'No URL available'
+                
+                # Extract the date from the search result (if available)
+                date = datetime.datetime.now().strftime('%Y-%m-%d')
+                
+                headlines.append({'title': title, 'url': url, 'date': date})
 
-    # Sort articles by date in descending order
-    articles.sort(key=lambda x: x['date'], reverse=True)
-    
-    return articles
+        except requests.exceptions.RequestException as e:
+            print(f"An error occurred while querying Google: {e}")
 
-def parse_date(date_str):
-    """Parse date from the string to a datetime object."""
-    try:
-        return datetime.strptime(date_str, '%b %d, %Y')
-    except ValueError:
-        return datetime.now()  # Fallback to now if parsing fails
+    return headlines
 
 def display_results(results):
-    """Display search results in the terminal."""
+    """Display search results in the terminal, sorted by date."""
     if not results:
         print("No results found.")
         return
 
-    for result in results:
+    # Sort results by date in reverse chronological order
+    sorted_results = sorted(results, key=lambda x: x['date'], reverse=True)
+
+    for result in sorted_results:
         print(f"Title: {result['title']}")
         print(f"URL: {result['url']}")
-        print(f"Date: {result['date'].strftime('%Y-%m-%d')}\n")
+        print(f"Date: {result['date']}\n")
         print("-" * 80)
 
-def main():
+if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: vimesget <location> [options]")
-        print("Options:")
-        print("  -s  Search for stabbings and knife attacks")
-        print("  -r  Search for robberies")
-        print("  -m  Search for murders")
-        print("  -g  Search for gang-related incidents")
+        print("Usage: vimesget [-s|-r|-m|-g] <location>")
         sys.exit(1)
 
-    location = sys.argv[1]
-    query = "crimes OR arrests OR wanted OR charges"
+    search_type = None
+    location = None
 
-    if len(sys.argv) > 2:
-        option = sys.argv[2]
-        if option == '-s':
-            query = "stabbing OR knife attack"
-        elif option == '-r':
-            query = "robbery OR robbed OR robbers"
-        elif option == '-m':
-            query = "murder OR murdered"
-        elif option == '-g':
-            query = "gang attack OR gang fight OR gang members"
+    if sys.argv[1] in SEARCH_TERMS:
+        search_type = sys.argv[1]
+        if len(sys.argv) >= 3:
+            location = sys.argv[2]
         else:
-            print(f"Unknown option: {option}")
+            print("Error: Location argument is missing.")
             sys.exit(1)
+    else:
+        location = sys.argv[1]
+        search_type = '-s'  # Default search type
 
-    results = fetch_news(location, query)
-    display_results(results)
-
-if __name__ == "__main__":
-    main()
+    if location:
+        results = perform_search(location, search_type)
+        display_results(results)
 EOF
 
 # Make the Vimes.py file executable
 chmod +x Vimes.py
 
 # Create a symlink to make the command available in the PATH
-sudo ln -sf ~/Vimes/Vimes.py /usr/local/bin/vimesget
+ln -s ~/Vimes/Vimes.py /usr/local/bin/vimesget
 
-# Notify user of completion
 echo "Installation complete. You can now use the 'vimesget' command from anywhere."

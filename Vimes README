@@ -1,3 +1,4 @@
+root user permission is needed to install this tool, sudo su or be root before using the install script in bash.
 Use bash shell, currently not working in zsh (I haven't checked fish might want to test that)
 Paste the Vimes installation script into your bash shell terminal (must be bash!)
 You can run the tool from any shell after, but the installation must be done inside bash shell ok!

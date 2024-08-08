@@ -1,11 +1,7 @@
 #!/bin/bash
 
-# Create the Vimes directory and navigate to it
-mkdir -p ~/Vimes
-cd ~/Vimes
-
-# Create and populate the Vimes.py file
-cat << 'EOF' > Vimes.py
+# Create and populate the Vimes.py file in the user's home directory
+cat << 'EOF' > ~/Vimes.py
 #!/usr/bin/env python3
 
 import sys
@@ -17,19 +13,18 @@ SEARCH_ENGINES = {
     'Google': 'https://www.google.com/search',
 }
 
-SEARCH_TERMS = {
-    'stabbing': 'stabbing knife attack',
-    'robbery': 'robbery robbers man robbed woman robbed',
-    'murder': 'murder man murdered woman murdered',
-    'gang': 'gang attack gang fight gang members'
-}
+SEARCH_TERMS = [
+    'stabbing', 'knife attack', 'robbery', 'robbers', 'man robbed', 
+    'woman robbed', 'murder', 'man murdered', 'woman murdered', 
+    'gang attack', 'gang fight', 'gang members'
+]
 
 def perform_search(query):
     """Perform a search on Google."""
-    search_queries = [f"{query} {term}" for term in SEARCH_TERMS.values()]
     headlines = []
 
-    for search_query in search_queries:
+    for term in SEARCH_TERMS:
+        search_query = f"{query} {term}"
         headers = {
             'User-Agent': 'Vimes CLI Tool'
         }
@@ -40,7 +35,6 @@ def perform_search(query):
             response.raise_for_status()
             
             soup = BeautifulSoup(response.text, 'html.parser')
-
             for item in soup.find_all('h3'):
                 title = item.get_text()
                 parent_a = item.find_parent('a')
@@ -80,9 +74,9 @@ if __name__ == "__main__":
 EOF
 
 # Make the Vimes.py file executable
-chmod +x Vimes.py
+chmod +x ~/Vimes.py
 
 # Create a symlink to make the command available in the PATH
-ln -s ~/Vimes/Vimes.py /usr/local/bin/vimesget
+ln -sf ~/Vimes.py /usr/local/bin/vimesget
 
 echo "Installation complete. You can now use the 'vimesget' command from anywhere."

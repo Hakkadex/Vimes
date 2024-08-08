@@ -1,0 +1,15 @@
+Paste the Vimes installation script into your terminal
+use command "vimesget" to use the tool
+Example usage "vimesget New York" "vimesget London" 
+use 4 different arguments
+-r (for robberies)
+-m (for murders)
+-g (for gang crimes)
+-s (for knife crime)
+Example of argument use "vimesget -s London"
+Example of argument use "vimesget -m Chicago"
+Example of argument use "vimesget -g USA"
+Example of argument use "vimesget -r France"
+
+Vimes the fearless night watch officer will track down those criminals with his trusted watchmen Nobby and Colon
+This tool will search for recent crimes that happened in the past 6 months and sort them in chronological order from distant to recent in your terminal.

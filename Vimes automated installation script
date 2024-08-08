@@ -1,7 +1,14 @@
 #!/bin/bash
 
-# Create and populate the Vimes.py file in the user's home directory
-cat << 'EOF' > ~/Vimes.py
+# Define the directory path
+DIRECTORY=~/Desktop/Vimes
+
+# Create the Vimes directory on the desktop and navigate to it
+mkdir -p "$DIRECTORY"
+cd "$DIRECTORY"
+
+# Create and populate the Vimes.py file
+cat << 'EOF' > Vimes.py
 #!/usr/bin/env python3
 
 import sys
@@ -11,42 +18,78 @@ import urllib.parse
 
 SEARCH_ENGINES = {
     'Google': 'https://www.google.com/search',
+    'Bing': 'https://www.bing.com/search',
+    'DuckDuckGo': 'https://duckduckgo.com/',
+    'Yandex': 'https://yandex.com/search/'
 }
 
-SEARCH_TERMS = [
-    'stabbing', 'knife attack', 'robbery', 'robbers', 'man robbed', 
-    'woman robbed', 'murder', 'man murdered', 'woman murdered', 
-    'gang attack', 'gang fight', 'gang members'
-]
+SEARCH_TERMS = {
+    '-s': ['stabbing', 'knife attack'],
+    '-r': ['robbery', 'robbers', 'man robbed', 'woman robbed'],
+    '-m': ['murder', 'man murdered', 'woman murdered'],
+    '-g': ['gang attack', 'gang fight', 'gang members']
+}
 
-def perform_search(query):
-    """Perform a search on Google."""
+def perform_search(query, engine):
+    """Perform a search on the specified search engine."""
+    search_queries = [f"{query} {term}" for term in SEARCH_TERMS.get(engine, [])]
     headlines = []
 
-    for term in SEARCH_TERMS:
-        search_query = f"{query} {term}"
+    for search_query in search_queries:
         headers = {
             'User-Agent': 'Vimes CLI Tool'
         }
         params = {'q': urllib.parse.quote(search_query)}
 
+        if engine == 'DuckDuckGo':
+            params = {'q': search_query}
+        elif engine == 'Yandex':
+            params = {'text': search_query}
+
         try:
-            response = requests.get(SEARCH_ENGINES['Google'], headers=headers, params=params)
+            response = requests.get(SEARCH_ENGINES[engine], headers=headers, params=params)
             response.raise_for_status()
             
             soup = BeautifulSoup(response.text, 'html.parser')
-            for item in soup.find_all('h3'):
-                title = item.get_text()
-                parent_a = item.find_parent('a')
-                if parent_a and parent_a.has_attr('href'):
-                    url = parent_a['href']
-                else:
-                    url = 'No URL available'
-                
-                headlines.append({'title': title, 'url': url})
+
+            if engine == 'Google':
+                for item in soup.find_all('h3'):
+                    title = item.get_text()
+                    parent_a = item.find_parent('a')
+                    if parent_a and parent_a.has_attr('href'):
+                        url = parent_a['href']
+                    else:
+                        url = 'No URL available'
+                    headlines.append({'title': title, 'url': url})
+
+            elif engine == 'Bing':
+                for item in soup.find_all('h2'):
+                    title = item.get_text()
+                    parent_a = item.find_parent('a')
+                    if parent_a and parent_a.has_attr('href'):
+                        url = parent_a['href']
+                    else:
+                        url = 'No URL available'
+                    headlines.append({'title': title, 'url': url})
+
+            elif engine == 'DuckDuckGo':
+                for item in soup.find_all('a', class_='result__a'):
+                    title = item.get_text()
+                    url = item['href']
+                    headlines.append({'title': title, 'url': url})
+
+            elif engine == 'Yandex':
+                for item in soup.find_all('h2', class_='organic__title'):
+                    title = item.get_text()
+                    parent_a = item.find_parent('a')
+                    if parent_a and parent_a.has_attr('href'):
+                        url = parent_a['href']
+                    else:
+                        url = 'No URL available'
+                    headlines.append({'title': title, 'url': url})
 
         except requests.exceptions.RequestException as e:
-            print(f"An error occurred while querying Google: {e}")
+            print(f"An error occurred while querying {engine}: {e}")
 
     return headlines
 
@@ -63,20 +106,42 @@ def display_results(results):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: vimesget <location>")
+        print("Usage: vimesget [-s|-r|-m|-g] <location>")
         sys.exit(1)
 
-    location = sys.argv[1]
+    search_type = None
+    location = None
 
-    if location:
-        results = perform_search(location)
-        display_results(results)
+    if sys.argv[1] in SEARCH_TERMS:
+        search_type = sys.argv[1]
+        if len(sys.argv) >= 3:
+            location = sys.argv[2]
+        else:
+            print("Error: Location argument is missing.")
+            sys.exit(1)
+    else:
+        location = sys.argv[1]
+        search_type = '-s'  # Default search type
+
+    all_headlines = []
+
+    # Perform main search on all search engines
+    for engine in SEARCH_ENGINES.keys():
+        print(f"Querying {engine}...")
+        headlines = perform_search(location, engine)
+        all_headlines.extend(headlines)
+
+    # Remove duplicate headlines
+    unique_headlines = {h['title']: h for h in all_headlines}.values()
+    sorted_headlines = sorted(unique_headlines, key=lambda x: x['title'])
+
+    display_results(sorted_headlines)
 EOF
 
 # Make the Vimes.py file executable
-chmod +x ~/Vimes.py
+chmod +x Vimes.py
 
 # Create a symlink to make the command available in the PATH
-ln -sf ~/Vimes.py /usr/local/bin/vimesget
+ln -s "$DIRECTORY/Vimes.py" /usr/local/bin/vimesget
 
 echo "Installation complete. You can now use the 'vimesget' command from anywhere."

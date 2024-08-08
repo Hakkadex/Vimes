@@ -16,6 +16,7 @@ import requests
 from bs4 import BeautifulSoup
 import urllib.parse
 import logging
+from datetime import datetime
 
 # Set up logging for debugging
 logging.basicConfig(
@@ -32,81 +33,71 @@ SEARCH_ENGINES = {
     'Yandex': 'https://yandex.com/search/'
 }
 
-SEARCH_TERMS = {
-    '-s': ['stabbing', 'knife attack'],
-    '-r': ['robbery', 'robbers', 'man robbed', 'woman robbed'],
-    '-m': ['murder', 'man murdered', 'woman murdered'],
-    '-g': ['gang attack', 'gang fight', 'gang members']
-}
+SEARCH_TERMS = [
+    'murder', 'stabbing', 'robbery', 'shooting', 'gang violence', 'gang attack'
+]
 
 def perform_search(query, engine):
     """Perform a search on the specified search engine."""
-    search_queries = [f"{query} {term}" for term in SEARCH_TERMS.get(engine, [])]
-    headlines = []
+    search_query = f"{query} crime news"
+    logging.debug(f"Search Query: {search_query} on {engine}")
+    headers = {
+        'User-Agent': 'Vimes CLI Tool'
+    }
 
-    for search_query in search_queries:
-        logging.debug(f"Search Query: {search_query} on {engine}")
-        headers = {
-            'User-Agent': 'Vimes CLI Tool'
-        }
+    params = {'q': search_query}
+    if engine == 'DuckDuckGo':
         params = {'q': search_query}
+    elif engine == 'Yandex':
+        params = {'text': search_query}
 
-        if engine == 'DuckDuckGo':
-            params = {'q': search_query}
+    try:
+        response = requests.get(SEARCH_ENGINES[engine], headers=headers, params=params)
+        response.raise_for_status()
+        logging.debug(f"HTTP Response Status: {response.status_code} for query: {search_query}")
+        
+        soup = BeautifulSoup(response.text, 'html.parser')
+        headlines = []
+
+        if engine == 'Google':
+            for item in soup.find_all('h3'):
+                title = item.get_text()
+                parent_a = item.find_parent('a')
+                if parent_a and parent_a.has_attr('href'):
+                    url = parent_a['href']
+                    headlines.append({'title': title, 'url': url})
+                    logging.debug(f"Found Google headline: {title} with URL: {url}")
+
+        elif engine == 'Bing':
+            for item in soup.find_all('li', class_='b_algo'):
+                title = item.find('h2').get_text()
+                parent_a = item.find('a')
+                if parent_a and parent_a.has_attr('href'):
+                    url = parent_a['href']
+                    headlines.append({'title': title, 'url': url})
+                    logging.debug(f"Found Bing headline: {title} with URL: {url}")
+
+        elif engine == 'DuckDuckGo':
+            for item in soup.find_all('a', class_='result__a'):
+                title = item.get_text()
+                url = item['href']
+                headlines.append({'title': title, 'url': url})
+                logging.debug(f"Found DuckDuckGo headline: {title} with URL: {url}")
+
         elif engine == 'Yandex':
-            params = {'text': search_query}
-
-        try:
-            response = requests.get(SEARCH_ENGINES[engine], headers=headers, params=params)
-            response.raise_for_status()
-            logging.debug(f"HTTP Response Status: {response.status_code} for query: {search_query}")
-            
-            soup = BeautifulSoup(response.text, 'html.parser')
-
-            if engine == 'Google':
-                for item in soup.find_all('h3'):
-                    title = item.get_text()
-                    parent_a = item.find_parent('a')
-                    if parent_a and parent_a.has_attr('href'):
-                        url = parent_a['href']
-                    else:
-                        url = 'No URL available'
+            for item in soup.find_all('h2', class_='organic__title'):
+                title = item.get_text()
+                parent_a = item.find_parent('a')
+                if parent_a and parent_a.has_attr('href'):
+                    url = parent_a['href']
                     headlines.append({'title': title, 'url': url})
-                    logging.debug(f"Found headline: {title} with URL: {url}")
+                    logging.debug(f"Found Yandex headline: {title} with URL: {url}")
 
-            elif engine == 'Bing':
-                for item in soup.find_all('h2'):
-                    title = item.get_text()
-                    parent_a = item.find_parent('a')
-                    if parent_a and parent_a.has_attr('href'):
-                        url = parent_a['href']
-                    else:
-                        url = 'No URL available'
-                    headlines.append({'title': title, 'url': url})
-                    logging.debug(f"Found headline: {title} with URL: {url}")
+        return headlines
 
-            elif engine == 'DuckDuckGo':
-                for item in soup.find_all('a', class_='result__a'):
-                    title = item.get_text()
-                    url = item['href']
-                    headlines.append({'title': title, 'url': url})
-                    logging.debug(f"Found headline: {title} with URL: {url}")
-
-            elif engine == 'Yandex':
-                for item in soup.find_all('h2', class_='organic__title'):
-                    title = item.get_text()
-                    parent_a = item.find_parent('a')
-                    if parent_a and parent_a.has_attr('href'):
-                        url = parent_a['href']
-                    else:
-                        url = 'No URL available'
-                    headlines.append({'title': title, 'url': url})
-                    logging.debug(f"Found headline: {title} with URL: {url}")
-
-        except requests.exceptions.RequestException as e:
-            logging.error(f"An error occurred while querying {engine}: {e}")
-
-    return headlines
+    except requests.exceptions.RequestException as e:
+        logging.error(f"An error occurred while querying {engine}: {e}")
+        return []
 
 def display_results(results):
     """Display search results in the terminal."""
@@ -122,25 +113,11 @@ def display_results(results):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: vimesget [-s|-r|-m|-g] <location>")
-        logging.error("Usage: vimesget [-s|-r|-m|-g] <location>")
+        print("Usage: vimesget <location>")
+        logging.error("Usage: vimesget <location>")
         sys.exit(1)
 
-    search_type = None
-    location = None
-
-    if sys.argv[1] in SEARCH_TERMS:
-        search_type = sys.argv[1]
-        if len(sys.argv) >= 3:
-            location = sys.argv[2]
-        else:
-            print("Error: Location argument is missing.")
-            logging.error("Error: Location argument is missing.")
-            sys.exit(1)
-    else:
-        location = sys.argv[1]
-        search_type = '-s'  # Default search type
-
+    location = sys.argv[1]
     all_headlines = []
 
     # Perform main search on all search engines
@@ -161,6 +138,6 @@ EOF
 chmod +x Vimes.py
 
 # Create a symlink to make the command available in the PATH
-ln -s "$DIRECTORY/Vimes.py" /usr/local/bin/vimesget
+ln -sf "$DIRECTORY/Vimes.py" /usr/local/bin/vimesget
 
 echo "Installation complete. You can now use the 'vimesget' command from anywhere."

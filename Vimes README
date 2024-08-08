@@ -1,5 +1,6 @@
 Use bash shell, currently not working in zsh (I haven't checked fish might want to test that)
-Paste the Vimes installation script into your terminal
+Paste the Vimes installation script into your bash shell terminal (must be bash!)
+You can run the tool from any shell after, but the installation must be done inside bash shell ok!
 use command "vimesget" to use the tool
 Example usage "vimesget New York" "vimesget London" "vimesget USA" "vimesget Tokyo"
 

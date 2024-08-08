@@ -26,17 +26,23 @@ def fetch_news(location, query):
         'User-Agent': 'Vimes CLI Tool'
     }
     
-    response = requests.get(url, headers=headers)
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching news: {e}")
+        return []
+
     soup = BeautifulSoup(response.text, 'html.parser')
 
     articles = []
-    for item in soup.find_all('div', class_='g'):
-        title_tag = item.find('h3')
+    for item in soup.find_all('div', class_='dbsr'):
+        title_tag = item.find('div', class_='JheGif')
         if not title_tag:
             continue
         title = title_tag.get_text()
         link = item.find('a')['href']
-        date_tag = item.find('span', class_='f')
+        date_tag = item.find('span', class_='WG9SHc')
         if date_tag:
             date_str = date_tag.get_text()
             date = parse_date(date_str)
@@ -53,12 +59,9 @@ def fetch_news(location, query):
 def parse_date(date_str):
     """Parse date from the string to a datetime object."""
     try:
-        return datetime.strptime(date_str, '%b %d').replace(year=datetime.now().year)
+        return datetime.strptime(date_str, '%b %d, %Y')
     except ValueError:
-        try:
-            return datetime.strptime(date_str, '%d %b').replace(year=datetime.now().year)
-        except ValueError:
-            return datetime.now()  # Fallback to now if parsing fails
+        return datetime.now()  # Fallback to now if parsing fails
 
 def display_results(results):
     """Display search results in the terminal."""

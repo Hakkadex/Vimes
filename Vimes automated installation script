@@ -1,22 +1,25 @@
 #!/bin/bash
 
-# Define the installation directory and script paths
-INSTALL_DIR=~/Vimes
-SCRIPT_PATH=$INSTALL_DIR/Vimes.py
-SYMLINK_PATH=/usr/local/bin/vimesget
-
 # Create the Vimes directory and navigate to it
-mkdir -p $INSTALL_DIR
+mkdir -p ~/Vimes
+cd ~/Vimes
 
 # Create and populate the Vimes.py file
-cat << 'EOF' > $SCRIPT_PATH
+cat << 'EOF' > Vimes.py
 #!/usr/bin/env python3
 
-import argparse
+import sys
 import requests
 from bs4 import BeautifulSoup
 import urllib.parse
 from datetime import datetime
+
+SEARCH_ENGINES = {
+    'Google': 'https://www.google.com/search',
+    'Bing': 'https://www.bing.com/search',
+    'DuckDuckGo': 'https://duckduckgo.com/',
+    'Yandex': 'https://yandex.com/search/'
+}
 
 def fetch_news(location, query):
     """Fetch recent news articles from Google News."""
@@ -76,27 +79,33 @@ def display_results(results):
         print("-" * 80)
 
 def main():
-    parser = argparse.ArgumentParser(description="Search for recent crime reports.")
-    parser.add_argument('location', type=str, help='Location to search for (e.g., London, New York)')
-    parser.add_argument('-s', '--stabbing', action='store_true', help='Search for stabbing incidents')
-    parser.add_argument('-r', '--robbery', action='store_true', help='Search for robbery incidents')
-    parser.add_argument('-m', '--murder', action='store_true', help='Search for murder incidents')
-    parser.add_argument('-g', '--gang', action='store_true', help='Search for gang-related incidents')
+    if len(sys.argv) < 2:
+        print("Usage: vimesget <location> [options]")
+        print("Options:")
+        print("  -s  Search for stabbings and knife attacks")
+        print("  -r  Search for robberies")
+        print("  -m  Search for murders")
+        print("  -g  Search for gang-related incidents")
+        sys.exit(1)
 
-    args = parser.parse_args()
+    location = sys.argv[1]
+    query = "crimes OR arrests OR wanted OR charges"
 
-    if args.stabbing:
-        query = "stabbing OR knife attack"
-    elif args.robbery:
-        query = "robbery OR robbers OR man robbed OR woman robbed"
-    elif args.murder:
-        query = "murder OR man murdered OR woman murdered"
-    elif args.gang:
-        query = "gang attack OR gang fight OR gang members"
-    else:
-        query = "crimes OR arrest made OR man charged with OR woman charged with"
+    if len(sys.argv) > 2:
+        option = sys.argv[2]
+        if option == '-s':
+            query = "stabbing OR knife attack"
+        elif option == '-r':
+            query = "robbery OR robbed OR robbers"
+        elif option == '-m':
+            query = "murder OR murdered"
+        elif option == '-g':
+            query = "gang attack OR gang fight OR gang members"
+        else:
+            print(f"Unknown option: {option}")
+            sys.exit(1)
 
-    results = fetch_news(args.location, query)
+    results = fetch_news(location, query)
     display_results(results)
 
 if __name__ == "__main__":
@@ -104,10 +113,10 @@ if __name__ == "__main__":
 EOF
 
 # Make the Vimes.py file executable
-chmod +x $SCRIPT_PATH
+chmod +x Vimes.py
 
 # Create a symlink to make the command available in the PATH
-ln -sf $SCRIPT_PATH $SYMLINK_PATH
+sudo ln -sf ~/Vimes/Vimes.py /usr/local/bin/vimesget
 
 # Notify user of completion
 echo "Installation complete. You can now use the 'vimesget' command from anywhere."

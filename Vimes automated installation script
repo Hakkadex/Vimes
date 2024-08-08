@@ -12,22 +12,21 @@ import sys
 import requests
 from bs4 import BeautifulSoup
 import urllib.parse
-import datetime
 
 SEARCH_ENGINES = {
     'Google': 'https://www.google.com/search',
 }
 
 SEARCH_TERMS = {
-    '-s': ['stabbing', 'knife attack'],
-    '-r': ['robbery', 'robbers', 'man robbed', 'woman robbed'],
-    '-m': ['murder', 'man murdered', 'woman murdered'],
-    '-g': ['gang attack', 'gang fight', 'gang members']
+    'stabbing': 'stabbing knife attack',
+    'robbery': 'robbery robbers man robbed woman robbed',
+    'murder': 'murder man murdered woman murdered',
+    'gang': 'gang attack gang fight gang members'
 }
 
-def perform_search(query, search_type):
+def perform_search(query):
     """Perform a search on Google."""
-    search_queries = [f"{query} {term}" for term in SEARCH_TERMS.get(search_type, [])]
+    search_queries = [f"{query} {term}" for term in SEARCH_TERMS.values()]
     headlines = []
 
     for search_query in search_queries:
@@ -41,6 +40,7 @@ def perform_search(query, search_type):
             response.raise_for_status()
             
             soup = BeautifulSoup(response.text, 'html.parser')
+
             for item in soup.find_all('h3'):
                 title = item.get_text()
                 parent_a = item.find_parent('a')
@@ -49,10 +49,7 @@ def perform_search(query, search_type):
                 else:
                     url = 'No URL available'
                 
-                # Extract the date from the search result (if available)
-                date = datetime.datetime.now().strftime('%Y-%m-%d')
-                
-                headlines.append({'title': title, 'url': url, 'date': date})
+                headlines.append({'title': title, 'url': url})
 
         except requests.exceptions.RequestException as e:
             print(f"An error occurred while querying Google: {e}")
@@ -60,41 +57,25 @@ def perform_search(query, search_type):
     return headlines
 
 def display_results(results):
-    """Display search results in the terminal, sorted by date."""
+    """Display search results in the terminal."""
     if not results:
         print("No results found.")
         return
 
-    # Sort results by date in reverse chronological order
-    sorted_results = sorted(results, key=lambda x: x['date'], reverse=True)
-
-    for result in sorted_results:
+    for result in results:
         print(f"Title: {result['title']}")
-        print(f"URL: {result['url']}")
-        print(f"Date: {result['date']}\n")
+        print(f"URL: {result['url']}\n")
         print("-" * 80)
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: vimesget [-s|-r|-m|-g] <location>")
+        print("Usage: vimesget <location>")
         sys.exit(1)
 
-    search_type = None
-    location = None
-
-    if sys.argv[1] in SEARCH_TERMS:
-        search_type = sys.argv[1]
-        if len(sys.argv) >= 3:
-            location = sys.argv[2]
-        else:
-            print("Error: Location argument is missing.")
-            sys.exit(1)
-    else:
-        location = sys.argv[1]
-        search_type = '-s'  # Default search type
+    location = sys.argv[1]
 
     if location:
-        results = perform_search(location, search_type)
+        results = perform_search(location)
         display_results(results)
 EOF
 

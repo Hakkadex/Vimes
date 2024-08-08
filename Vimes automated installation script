@@ -15,6 +15,15 @@ import sys
 import requests
 from bs4 import BeautifulSoup
 import urllib.parse
+import logging
+
+# Set up logging for debugging
+logging.basicConfig(
+    filename='vimes_debug.log',
+    filemode='w',
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    level=logging.DEBUG
+)
 
 SEARCH_ENGINES = {
     'Google': 'https://www.google.com/search',
@@ -36,10 +45,11 @@ def perform_search(query, engine):
     headlines = []
 
     for search_query in search_queries:
+        logging.debug(f"Search Query: {search_query} on {engine}")
         headers = {
             'User-Agent': 'Vimes CLI Tool'
         }
-        params = {'q': urllib.parse.quote(search_query)}
+        params = {'q': search_query}
 
         if engine == 'DuckDuckGo':
             params = {'q': search_query}
@@ -49,6 +59,7 @@ def perform_search(query, engine):
         try:
             response = requests.get(SEARCH_ENGINES[engine], headers=headers, params=params)
             response.raise_for_status()
+            logging.debug(f"HTTP Response Status: {response.status_code} for query: {search_query}")
             
             soup = BeautifulSoup(response.text, 'html.parser')
 
@@ -61,6 +72,7 @@ def perform_search(query, engine):
                     else:
                         url = 'No URL available'
                     headlines.append({'title': title, 'url': url})
+                    logging.debug(f"Found headline: {title} with URL: {url}")
 
             elif engine == 'Bing':
                 for item in soup.find_all('h2'):
@@ -71,12 +83,14 @@ def perform_search(query, engine):
                     else:
                         url = 'No URL available'
                     headlines.append({'title': title, 'url': url})
+                    logging.debug(f"Found headline: {title} with URL: {url}")
 
             elif engine == 'DuckDuckGo':
                 for item in soup.find_all('a', class_='result__a'):
                     title = item.get_text()
                     url = item['href']
                     headlines.append({'title': title, 'url': url})
+                    logging.debug(f"Found headline: {title} with URL: {url}")
 
             elif engine == 'Yandex':
                 for item in soup.find_all('h2', class_='organic__title'):
@@ -87,9 +101,10 @@ def perform_search(query, engine):
                     else:
                         url = 'No URL available'
                     headlines.append({'title': title, 'url': url})
+                    logging.debug(f"Found headline: {title} with URL: {url}")
 
         except requests.exceptions.RequestException as e:
-            print(f"An error occurred while querying {engine}: {e}")
+            logging.error(f"An error occurred while querying {engine}: {e}")
 
     return headlines
 
@@ -97,6 +112,7 @@ def display_results(results):
     """Display search results in the terminal."""
     if not results:
         print("No results found.")
+        logging.info("No results found.")
         return
 
     for result in results:
@@ -107,6 +123,7 @@ def display_results(results):
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: vimesget [-s|-r|-m|-g] <location>")
+        logging.error("Usage: vimesget [-s|-r|-m|-g] <location>")
         sys.exit(1)
 
     search_type = None
@@ -118,6 +135,7 @@ if __name__ == "__main__":
             location = sys.argv[2]
         else:
             print("Error: Location argument is missing.")
+            logging.error("Error: Location argument is missing.")
             sys.exit(1)
     else:
         location = sys.argv[1]
@@ -128,6 +146,7 @@ if __name__ == "__main__":
     # Perform main search on all search engines
     for engine in SEARCH_ENGINES.keys():
         print(f"Querying {engine}...")
+        logging.info(f"Querying {engine}...")
         headlines = perform_search(location, engine)
         all_headlines.extend(headlines)
 

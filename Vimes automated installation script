@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
 
 # Define the installation directory and script paths
 INSTALL_DIR=~/Vimes

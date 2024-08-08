@@ -53,7 +53,6 @@ def fetch_news(location, query):
 def parse_date(date_str):
     """Parse date from the string to a datetime object."""
     try:
-        # Example date formats: 'Aug 8', '8 Aug', 'August 8, 2024'
         return datetime.strptime(date_str, '%b %d').replace(year=datetime.now().year)
     except ValueError:
         try:

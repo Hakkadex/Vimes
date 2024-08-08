@@ -8,3 +8,5 @@ This script will make a directory called "Vimes" on your desktop with the files 
 Vimes the fearless night watch officer will track down those criminals with his trusted watchmen Nobby and Colon
 This tool will search for recent crimes that happened in the past 6 months and sort them in chronological order from distant to recent in your terminal. It will prioritize violent crimes, robberies, murders, shootings, stabbings etc.
 Enjoy the assistance of Captain Vimes the trusted Watchman in your terminal.
+
+Issues with tool currently detected, when searching highly localized areas like a city, village or town, the scan can be skewed by your own IP address or VPN location. If the scan is zoned into a large area like a nation (USA) state or continent the local skewing does not occur. I am aware of this and am working on adjusting it accordingly, other than this the tool seems to be working perfectly.

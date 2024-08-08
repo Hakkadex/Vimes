@@ -1,0 +1,111 @@
+#!/bin/bash
+
+# Define the installation directory and script paths
+INSTALL_DIR=~/Vimes
+SCRIPT_PATH=$INSTALL_DIR/Vimes.py
+SYMLINK_PATH=/usr/local/bin/vimesget
+
+# Create the Vimes directory and navigate to it
+mkdir -p $INSTALL_DIR
+
+# Create and populate the Vimes.py file
+cat << 'EOF' > $SCRIPT_PATH
+#!/usr/bin/env python3
+
+import argparse
+import requests
+from bs4 import BeautifulSoup
+import urllib.parse
+from datetime import datetime
+
+def fetch_news(location, query):
+    """Fetch recent news articles from Google News."""
+    search_query = f"{location} {query}"
+    url = f"https://www.google.com/search?q={urllib.parse.quote(search_query)}&tbm=nws&tbs=qdr:m"  # Filter results for the past 6 months
+    headers = {
+        'User-Agent': 'Vimes CLI Tool'
+    }
+    
+    response = requests.get(url, headers=headers)
+    soup = BeautifulSoup(response.text, 'html.parser')
+
+    articles = []
+    for item in soup.find_all('div', class_='g'):
+        title_tag = item.find('h3')
+        if not title_tag:
+            continue
+        title = title_tag.get_text()
+        link = item.find('a')['href']
+        date_tag = item.find('span', class_='f')
+        if date_tag:
+            date_str = date_tag.get_text()
+            date = parse_date(date_str)
+        else:
+            date = datetime.now()  # Use current date if no date is available
+
+        articles.append({'title': title, 'url': link, 'date': date})
+
+    # Sort articles by date in descending order
+    articles.sort(key=lambda x: x['date'], reverse=True)
+    
+    return articles
+
+def parse_date(date_str):
+    """Parse date from the string to a datetime object."""
+    try:
+        # Example date formats: 'Aug 8', '8 Aug', 'August 8, 2024'
+        return datetime.strptime(date_str, '%b %d').replace(year=datetime.now().year)
+    except ValueError:
+        try:
+            return datetime.strptime(date_str, '%d %b').replace(year=datetime.now().year)
+        except ValueError:
+            return datetime.now()  # Fallback to now if parsing fails
+
+def display_results(results):
+    """Display search results in the terminal."""
+    if not results:
+        print("No results found.")
+        return
+
+    for result in results:
+        print(f"Title: {result['title']}")
+        print(f"URL: {result['url']}")
+        print(f"Date: {result['date'].strftime('%Y-%m-%d')}\n")
+        print("-" * 80)
+
+def main():
+    parser = argparse.ArgumentParser(description="Search for recent crime reports.")
+    parser.add_argument('location', type=str, help='Location to search for (e.g., London, New York)')
+    parser.add_argument('-s', '--stabbing', action='store_true', help='Search for stabbing incidents')
+    parser.add_argument('-r', '--robbery', action='store_true', help='Search for robbery incidents')
+    parser.add_argument('-m', '--murder', action='store_true', help='Search for murder incidents')
+    parser.add_argument('-g', '--gang', action='store_true', help='Search for gang-related incidents')
+
+    args = parser.parse_args()
+
+    if args.stabbing:
+        query = "stabbing OR knife attack"
+    elif args.robbery:
+        query = "robbery OR robbers OR man robbed OR woman robbed"
+    elif args.murder:
+        query = "murder OR man murdered OR woman murdered"
+    elif args.gang:
+        query = "gang attack OR gang fight OR gang members"
+    else:
+        query = "crimes OR arrest made OR man charged with OR woman charged with"
+
+    results = fetch_news(args.location, query)
+    display_results(results)
+
+if __name__ == "__main__":
+    main()
+EOF
+
+# Make the Vimes.py file executable
+chmod +x $SCRIPT_PATH
+
+# Create a symlink to make the command available in the PATH
+ln -sf $SCRIPT_PATH $SYMLINK_PATH
+
+# Notify user of completion
+echo "Installation complete. You can now use the 'vimesget' command from anywhere."

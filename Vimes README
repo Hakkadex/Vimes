@@ -6,6 +6,7 @@ use command "vimesget" to use the tool
 Example usage "vimesget New York" "vimesget London" "vimesget USA" "vimesget Tokyo"
 
 This script will make a directory called "Vimes" on your desktop with the files inside
+It will then create a symlink for vimesget and give the tool and vimes.py execution permissions (this is a python based tool)
 
 Vimes the fearless night watch officer will track down those criminals with his trusted watchmen Nobby and Colon
 This tool will search for recent crimes that happened in the past 6 months and sort them in chronological order from distant to recent in your terminal. It will prioritize violent crimes, robberies, murders, shootings, stabbings etc.

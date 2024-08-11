@@ -12,4 +12,5 @@ Vimes the fearless night watch officer will track down those criminals with his 
 This tool will search for recent crimes that happened in the past 6 months and sort them in chronological order from distant to recent in your terminal. It will prioritize violent crimes, robberies, murders, shootings, stabbings etc.
 Enjoy the assistance of Captain Vimes the trusted Watchman in your terminal.
 
-Issues with tool currently detected, when searching highly localized areas like a city, village or town, the scan can be skewed by your own IP address or VPN location. If the scan is zoned into a large area like a nation (USA) state or continent the local skewing does not occur. I am aware of this and am working on adjusting it accordingly, other than this the tool seems to be working perfectly.
+The tool also has the capability to search for names and specifics, input known criminal names, high profile targets etc instead of a location to pull reports of those incidents.
+This tool is for quick scanning curiosity, not intended for professional database scraping, this is a hobbyist tool for terminal junkies.
